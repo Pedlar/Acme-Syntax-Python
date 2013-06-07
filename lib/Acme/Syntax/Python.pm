@@ -46,7 +46,7 @@ sub filter {
     if($self->{_in_block}) {
         /^(\s*)/;
         my $depth = length ( $1 );
-        if($depth <= (4 * $self->{_block_depth})) {
+        if($depth < (4 * $self->{_block_depth})) {
             s/^/\}/;
             -- $self->{_block_depth};
 	}
@@ -60,18 +60,42 @@ sub filter {
     s{^\s*from (.+) import (.+);$}
      {use $1 ($2);}gmx;
 
+    s{True}{1}gmx;
+    s{False}{0}gmx;
+
+    #Handle def with Params
+    if(/def (.+)\((.+)\):/) {
+        s{def (.+)\((.+)\):}{sub $1 \{ my($2) = \@_;}gmx;
+        $self->{_in_block} = 1;
+        ++ $self->{_block_depth};
+    }
+
+    #Handle def with no Params
     if(/def (.+):/) {
         s{def (.+):}{sub $1 \{};
         $self->{_in_block} = 1;
         ++ $self->{_block_depth};
     }
-
-    if(/if \((.*)\):/) {
+    
+    if(/elif (.+)/) {
+	s{elif (.+)}{elsif $1}gmx;
+    }
+    elsif(/if (.*)/) {
+        s{if (.*)}{if $1}gmx;
+    }
+    if(/\):$/) {
+        s{:$}{ \{}gmx;
+        $self->{_in_block} = 1;
+        ++ $self->{_block_depth};
+    }
+    if(/else:/) {
         s{:$}{\{}gmx;
         $self->{_in_block} = 1;
         ++ $self->{_block_depth};
     }
 
+
+    #print "$_";
     return $status;
 }
 
