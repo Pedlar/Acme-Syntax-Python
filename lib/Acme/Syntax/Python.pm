@@ -44,7 +44,15 @@ sub filter {
     }
 
     if($self->{_in_block}) {
-        
+        /^(\s*)/;
+        my $depth = length ( $1 );
+        if($depth <= (4 * $self->{_block_depth})) {
+            s/^/\}/;
+            -- $self->{_block_depth};
+	}
+        if($self->{_block_depth} == 0) {
+            $self->{_in_block} = 0;
+        }
     }
 
     s{^\s*import (.+);$}
@@ -54,6 +62,12 @@ sub filter {
 
     if(/def (.+):/) {
         s{def (.+):}{sub $1 \{};
+        $self->{_in_block} = 1;
+        ++ $self->{_block_depth};
+    }
+
+    if(/if \((.*)\):/) {
+        s{:$}{\{}gmx;
         $self->{_in_block} = 1;
         ++ $self->{_block_depth};
     }
