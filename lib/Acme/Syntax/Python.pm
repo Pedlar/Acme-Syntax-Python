@@ -51,23 +51,7 @@ sub filter {
     }
 
     if($self->{_in_block}) {
-        /^(\s*)/;
-        my $depth = length ( $1 );
-        if($depth < (4 * $self->{_block_depth})) {
-            if($self->{_lambda_block}->{$self->{_block_depth}}) {
-                $self->{_lambda_block}->{$self->{_block_depth}} = 0;
-                s/^/\};\n/;
-            } elsif ($self->{_class_block}->{$self->{_block_depth}}){
-                $self->{_class_block}->{$self->{_block_depth}} = 0;
-                s/^/return bless \$self, \$class;\n\}\n/;
-            } else {
-                s/^/\}\n/;
-            }
-            -- $self->{_block_depth};
-	}
-        if($self->{_block_depth} == 0) {
-            $self->{_in_block} = 0;
-        }
+        _handle_block($self, $_);
     }
 
     s{^\s*import (.+);$}
@@ -80,36 +64,30 @@ sub filter {
 
     if(/class (.+):/) {
         s{class (.+):}{\{\npackage $1;\n}gmx;
-        $self->{_in_block} = 1;
-        ++ $self->{_block_depth};
+        _start_block($self);
     }
 
     #Handle def with Params
     if(/lambda\((.+)\):/) {
         s{lambda\((.+)\):}{sub \{ my($1) = \@_;}gmx;
-        $self->{_in_block} = 1;
-        ++ $self->{_block_depth};
-        $self->{_lambda_block}->{$self->{_block_depth}} = 1;
+        _start_block($self, "_lambda_block");
     }
 
     #Handle def with no Params
     if(/lambda:/) {
         s{lambda:}{sub \{};
-        $self->{_in_block} = 1;
-        ++ $self->{_block_depth};
-        $self->{_lambda_block}->{$self->{_block_depth}} = 1;
+        _start_block($self, "_lambda_block");
     }
 
     #Handle def with Params
     if(/def (.+)\((.+)\):/) {
         if($1 eq "__init__") {
-            s{def (.+)\((.+)\):}{sub $1 \{ my(\$class, $2) = \@_;\nmy \$self = \{\};}gmx;
+            s{def (.+)\((.+)\):}{sub $1 \{ my(\$class, $2) = \@_; my \$self = \{\};}gmx;
             $self->{_class_block}->{($self->{_block_depth} + 1)} = 1;
         } else {
             s{def (.+)\((.+)\):}{sub $1 \{ my($2) = \@_;}gmx;
         }
-        $self->{_in_block} = 1;
-        ++ $self->{_block_depth};
+        _start_block($self);
     }
     
     #Handle def with no Params
@@ -120,8 +98,7 @@ sub filter {
         } else {
             s{def (.+):}{sub $1 \{}gmx;
         }
-        $self->{_in_block} = 1;
-        ++ $self->{_block_depth};
+        _start_block($self);
     }
     
     s{__init__}{new}gmx;
@@ -134,18 +111,54 @@ sub filter {
     }
     if(/\):$/) {
         s{:$}{ \{}gmx;
-        $self->{_in_block} = 1;
-        ++ $self->{_block_depth};
+        _start_block($self);
     }
     if(/else:/) {
         s{:$}{\{}gmx;
-        $self->{_in_block} = 1;
-        ++ $self->{_block_depth};
+        _start_block($self);
     }
 
 
-#    print "$_";
+    print "$_";
     return $status;
+}
+
+sub _handle_spacing {
+    my $depth = shift;
+    my $modifier = shift // 1;
+    return (' ') x (4 * ($depth - $modifier));
+}
+
+sub _start_block {
+    my ($self, $type) = @_;
+    $self->{_in_block} = 1;
+    ++ $self->{_block_depth};
+    if(defined($type)) {
+        $self->{$type}->{$self->{_block_depth}} = 1;
+    }
+}
+
+sub _handle_block {
+        my ($self) = @_;
+        /^(\s*)/;
+        my $depth = length ( $1 );
+        if($depth < (4 * $self->{_block_depth})) {
+            my $spaces = _handle_spacing($self->{_block_depth});
+            if($self->{_lambda_block}->{$self->{_block_depth}}) {
+                $self->{_lambda_block}->{$self->{_block_depth}} = 0;
+                s/^/$spaces\};\n/;
+            } elsif ($self->{_class_block}->{$self->{_block_depth}}){
+                my $spaces_front = _handle_spacing($self->{_block_depth}, 0);
+                $self->{_class_block}->{$self->{_block_depth}} = 0;
+                s/^/$spaces_front return bless \$self, \$class;\n$spaces\}\n/;
+            } else {
+                s/^/$spaces\}\n/;
+            }
+            -- $self->{_block_depth};
+	}
+        if($self->{_block_depth} == 0) {
+            $self->{_in_block} = 0;
+        }
 }
 
 1;
