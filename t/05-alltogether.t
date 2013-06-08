@@ -1,6 +1,6 @@
 use lib './lib';
 use Acme::Syntax::Python;
-import Test::More;
+import Test::More tests => 5;
 
 class Client:
     def __init__($client_id):
@@ -27,4 +27,3 @@ def check($client):
     else:
         ok(1, "Client id was not 1 or 2");
 
-done_testing();

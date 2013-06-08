@@ -9,7 +9,8 @@ $VERSION = "0.01";
 #ABSTRACT: 
 
 sub import {
-    my ($type) = @_;
+    shift; #We don't need Class Name.
+    my %params = @_;
     my (%context) = (
         _filename => (caller)[1],
         _line_no => 0,
@@ -17,7 +18,8 @@ sub import {
         _in_block => 0,
         _block_depth => 0,
         _lambda_block => {},
-        _class_block => {}
+        _class_block => {},
+        _debug => $params{debug}
     );
     filter_add(bless \%context);
 }
@@ -61,6 +63,11 @@ sub filter {
 
     s{True}{1}gmx;
     s{False}{0}gmx;
+
+    if(/class (.+) inherits (.+):/) {
+        s{class (.+) inherits (.+):}{\{\npackage $1;\nuse $2; our \@ISA = qw($2);\n}gmx;
+        _start_block($self);
+    }
 
     if(/class (.+):/) {
         s{class (.+):}{\{\npackage $1;\n}gmx;
@@ -118,8 +125,9 @@ sub filter {
         _start_block($self);
     }
 
-
-    print "$_";
+    if($self->{_debug}) {
+        print "$_";
+    }
     return $status;
 }
 
