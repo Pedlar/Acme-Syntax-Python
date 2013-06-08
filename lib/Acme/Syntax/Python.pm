@@ -15,7 +15,9 @@ sub import {
         _line_no => 0,
         _last_begin => 0,
         _in_block => 0,
-        _block_depth => 0
+        _block_depth => 0,
+        _lambda_block => {},
+        _class_block => {}
     );
     filter_add(bless \%context);
 }
@@ -40,14 +42,27 @@ sub filter {
     $status = filter_read();
     ++ $self->{line_no};
     if ($status <= 0) {
-       return $status;
+        if($self->{_in_block}) {
+            $_ = "}\n";
+            ++ $status;
+            $self->{_in_block} = 0;
+        }
+        return $status;
     }
 
     if($self->{_in_block}) {
         /^(\s*)/;
         my $depth = length ( $1 );
         if($depth < (4 * $self->{_block_depth})) {
-            s/^/\}/;
+            if($self->{_lambda_block}->{$self->{_block_depth}}) {
+                $self->{_lambda_block}->{$self->{_block_depth}} = 0;
+                s/^/\};\n/;
+            } elsif ($self->{_class_block}->{$self->{_block_depth}}){
+                $self->{_class_block}->{$self->{_block_depth}} = 0;
+                s/^/return bless \$self, \$class;\n\}\n/;
+            } else {
+                s/^/\}\n/;
+            }
             -- $self->{_block_depth};
 	}
         if($self->{_block_depth} == 0) {
@@ -63,20 +78,54 @@ sub filter {
     s{True}{1}gmx;
     s{False}{0}gmx;
 
-    #Handle def with Params
-    if(/def (.+)\((.+)\):/) {
-        s{def (.+)\((.+)\):}{sub $1 \{ my($2) = \@_;}gmx;
+    if(/class (.+):/) {
+        s{class (.+):}{\{\npackage $1;\n}gmx;
         $self->{_in_block} = 1;
         ++ $self->{_block_depth};
     }
 
+    #Handle def with Params
+    if(/lambda\((.+)\):/) {
+        s{lambda\((.+)\):}{sub \{ my($1) = \@_;}gmx;
+        $self->{_in_block} = 1;
+        ++ $self->{_block_depth};
+        $self->{_lambda_block}->{$self->{_block_depth}} = 1;
+    }
+
     #Handle def with no Params
-    if(/def (.+):/) {
-        s{def (.+):}{sub $1 \{};
+    if(/lambda:/) {
+        s{lambda:}{sub \{};
+        $self->{_in_block} = 1;
+        ++ $self->{_block_depth};
+        $self->{_lambda_block}->{$self->{_block_depth}} = 1;
+    }
+
+    #Handle def with Params
+    if(/def (.+)\((.+)\):/) {
+        if($1 eq "__init__") {
+            s{def (.+)\((.+)\):}{sub $1 \{ my(\$class, $2) = \@_;\nmy \$self = \{\};}gmx;
+            $self->{_class_block}->{($self->{_block_depth} + 1)} = 1;
+        } else {
+            s{def (.+)\((.+)\):}{sub $1 \{ my($2) = \@_;}gmx;
+        }
         $self->{_in_block} = 1;
         ++ $self->{_block_depth};
     }
     
+    #Handle def with no Params
+    if(/def (.+):/) {
+        if($1 eq "__init__") {
+            s{def (.+):}{sub $1 \{ my (\$class) = shift; my \$self = \{\};}gmx;
+            $self->{_class_block}->{($self->{_block_depth} + 1)} = 1;	
+        } else {
+            s{def (.+):}{sub $1 \{}gmx;
+        }
+        $self->{_in_block} = 1;
+        ++ $self->{_block_depth};
+    }
+    
+    s{__init__}{new}gmx;
+
     if(/elif (.+)/) {
 	s{elif (.+)}{elsif $1}gmx;
     }
@@ -95,7 +144,7 @@ sub filter {
     }
 
 
-    #print "$_";
+#    print "$_";
     return $status;
 }
 
