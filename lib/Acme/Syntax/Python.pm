@@ -126,7 +126,7 @@ sub filter {
     }
 
     if($self->{_debug}) {
-        print "$_";
+        print "$self->{line_no} $_";
     }
     return $status;
 }
