@@ -170,3 +170,40 @@ sub _handle_block {
 }
 
 1;
+
+__END__
+
+=head1 NAME
+
+Acme::Syntax::Python - Python like Syntax for Perl.
+
+=head1 SYNOPSIS
+
+  use Acme::Syntax::Python;
+  fromt Data::Dump import 'dump';
+
+  def print_dump:
+      print dump "Hello";
+
+
+
+=head1 DESCRIPTION
+
+Provide a better way of doing block comments instead of using POD or
+always false if blocks.
+
+=head1 VERSION
+
+This documentation describes version 0.01.
+
+=head1 AUTHOR
+
+ Madison Koenig <pedlar AT cpan DOT org>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2013 Madison Koenig
+All rights reserved.  This program is free software; you can redistribute it and/or 
+modify it under the same terms as Perl itself.
+
+=cut
