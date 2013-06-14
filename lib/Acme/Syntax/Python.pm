@@ -180,17 +180,96 @@ Acme::Syntax::Python - Python like Syntax for Perl.
 =head1 SYNOPSIS
 
   use Acme::Syntax::Python;
-  fromt Data::Dump import 'dump';
+  from Data::Dump import 'dump';
 
   def print_dump:
       print dump "Hello";
 
-
+  print_dump;
 
 =head1 DESCRIPTION
 
-Provide a better way of doing block comments instead of using POD or
-always false if blocks.
+Translates a Python like syntax into executable Perl code. Right now blocks are defined by 4 spaces. I plan on extending this to tabs as well soon.
+
+=head1 MODULES
+
+Include modules into your file is much like the Python way using import.
+
+  import Data::Dump;
+
+this would include the Data::Dump module and whatever it exported by default.
+
+If you need to exlicity name exports you can using "from"
+
+  from Data::Dump import 'dump';
+
+With perl you can also define params for use, with those you would just use import as a syntatic change of use.
+
+  import Test::More tests => 4;
+
+=head1 FUNCTIONS
+
+You can declate Functions just like you would in Python.
+
+ex: Function with no Paramaters:
+
+  def hello_world:
+      print "Hello World";
+
+You can also declare functions with Paramaters:
+
+  def hello($say):
+      print "Hello $say";
+
+  hello("World");
+
+It will automatically define the variable for you and assign it from the paramater list.
+
+=head1 IF/ELIF/ELSE
+
+If/Else is the same as python as well, just you cannot omit the ()'s around the condition statements.
+The Conditionals are still the same Perl conditionals.
+
+  if ($1 eq "hello"):
+      print "I received Hello!";
+  elif ($2 eq "world"):
+      print "I received World!";
+  else:
+      print "No mathces for me";
+
+
+Conditionals can also span multiple lines like normal:
+
+  if($bar == 1 && 
+     $foo == 2):
+      print "Truth";
+     
+=head1 CLASSES
+
+Class definitions are supported as well, though translated in Perl they're just a Namespace declaration.
+
+  class Foo:
+      def bar:
+          print "baz";
+
+  Foo::baz();
+
+You can also create Class Objects, using __init__ as the "sub new" constructor.
+If declaring your paramaters for a Method in a Object class you need to declare $self first.
+
+  class Foo:
+      def __init__($bar):
+          $self->{bar} = $bar;
+
+      def bar($self):
+          print $self->{bar};
+
+  $baz = Foo->new("bar");
+  print $baz->bar();
+
+
+If you wanted to write an entire object class with this then you would put the class in it's own .pm file
+like normal and include it in the Perl file like normal.
 
 =head1 VERSION
 
