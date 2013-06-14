@@ -6,10 +6,10 @@ use vars qw($VERSION);
 
 $VERSION = "0.01";
 
-#ABSTRACT: 
+# ABSTRACT: Python like Syntax Module
 
 sub import {
-    shift; #We don't need Class Name.
+    my $class = shift; #We don't need Class Name.
     my %params = @_;
     my (%context) = (
         _filename => (caller)[1],
@@ -21,7 +21,7 @@ sub import {
         _class_block => {},
         _debug => $params{debug}
     );
-    filter_add(bless \%context);
+    filter_add(bless \%context, $class);
 }
 
 sub error {
@@ -96,22 +96,22 @@ sub filter {
         }
         _start_block($self);
     }
-    
+
     #Handle def with no Params
     if(/def (.+):/) {
         if($1 eq "__init__") {
             s{def (.+):}{sub $1 \{ my (\$class) = shift; my \$self = \{\};}gmx;
-            $self->{_class_block}->{($self->{_block_depth} + 1)} = 1;	
+            $self->{_class_block}->{($self->{_block_depth} + 1)} = 1;
         } else {
             s{def (.+):}{sub $1 \{}gmx;
         }
         _start_block($self);
     }
-    
+
     s{__init__}{new}gmx;
 
     if(/elif (.+)/) {
-	s{elif (.+)}{elsif $1}gmx;
+        s{elif (.+)}{elsif $1}gmx;
     }
     elsif(/if (.*)/) {
         s{if (.*)}{if $1}gmx;
@@ -163,7 +163,7 @@ sub _handle_block {
                 s/^/$spaces\}\n/;
             }
             -- $self->{_block_depth};
-	}
+        }
         if($self->{_block_depth} == 0) {
             $self->{_in_block} = 0;
         }
@@ -240,10 +240,10 @@ The Conditionals are still the same Perl conditionals.
 
 Conditionals can also span multiple lines like normal:
 
-  if($bar == 1 && 
+  if($bar == 1 &&
      $foo == 2):
       print "Truth";
-     
+
 =head1 CLASSES
 
 Class definitions are supported as well, though translated in Perl they're just a Namespace declaration.
@@ -282,7 +282,7 @@ This documentation describes version 0.01.
 =head1 COPYRIGHT
 
 Copyright (c) 2013 Madison Koenig
-All rights reserved.  This program is free software; you can redistribute it and/or 
+All rights reserved.  This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
 
 =cut
